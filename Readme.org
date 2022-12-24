@@ -1,0 +1,3 @@
+* GRLIB Template Repo
+
+Use this repo to add custom IP cores to ~grlib~
