@@ -42,6 +42,8 @@ use gaisler.sim.all;
 --pragma translate_on
 library esa;
 use esa.memoryctrl.all;
+library staging;
+use staging.iop16_pkg.all;
 use work.config.all;
 
 entity leon3mp is
@@ -129,6 +131,10 @@ architecture rtl of leon3mp is
   constant clock_div  : integer := 20;      -- Clock divider
   constant BOARD_FREQ : integer := 100000;  -- CLK input frequency in KHz
   constant CPU_FREQ   : integer := BOARD_FREQ * clock_mult / clock_div;  -- CPU freq in KHz
+
+  signal gpioi : iop16_gpio_in;
+  signal gpioo : iop16_gpio_out;
+  
 begin
 
 ----------------------------------------------------------------------
@@ -263,6 +269,20 @@ begin
   u1i.extclk <= '0';
   txd1       <= u1o.txd;
 
+  dut: entity staging.iop16_apb
+    generic map (
+      memtech => memtech,
+      vendor_id => VENDOR_CONTRIB,
+      device_id => CONTRIB_CORE1,
+      pindex => 5,
+      paddr => 16#800#,
+      pmask => 16#f80#)
+    port map (
+      clk => clkm, rst => rstn,
+      apbi => apbi, apbo => apbo(5),
+      gpioi => gpioi, gpioo => gpioo);
+  gpioi <= (data => x"00");
+  
 -----------------------------------------------------------------------
 --  Test report module, only used for simulation ----------------------
 -----------------------------------------------------------------------

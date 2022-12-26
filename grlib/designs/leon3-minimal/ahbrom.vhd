@@ -200,7 +200,7 @@ begin
         when 16#00067# => romdata <= X"8410a133";
         when 16#00068# => romdata <= X"c4204000";
         when 16#00069# => romdata <= X"0539ae05";
-        when 16#0006A# => romdata <= X"8410a25f";
+        when 16#0006A# => romdata <= X"8410a250";
         when 16#0006B# => romdata <= X"c4206004";
         when 16#0006C# => romdata <= X"050003fc";
         when 16#0006D# => romdata <= X"c4206008";
@@ -353,7 +353,7 @@ begin
         when 16#00067# => romdata <= X"33a11084";
         when 16#00068# => romdata <= X"004020c4";
         when 16#00069# => romdata <= X"05ae3905";
-        when 16#0006A# => romdata <= X"5fa21084";
+        when 16#0006A# => romdata <= X"50a21084";
         when 16#0006B# => romdata <= X"046020c4";
         when 16#0006C# => romdata <= X"fc030005";
         when 16#0006D# => romdata <= X"086020c4";
