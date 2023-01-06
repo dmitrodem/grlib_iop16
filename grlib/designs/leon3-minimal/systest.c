@@ -46,31 +46,25 @@ struct iop16_t {
 };
 
 
-const uint16_t rom[] = {0x4107, 0xb1ff, 0xf001, 0x41ab, 0x7120, 0xd005};
-const size_t rom_len = sizeof(rom)/sizeof(rom[0]);
+extern const uint16_t iop16_rom[];
+extern const size_t iop16_rom_len;
 
 int main() {
   volatile struct iop16_t *r = (volatile struct iop16_t *) IOP16_ADDR;
 
   r->ctrl.ctrl = 0x00;
+  r->timer.scaler_reload = 10-1;
+  r->timer.scaler_value = 10-1;
   do {
     size_t i;
-    for (i = 0; i < rom_len; i++) {
-      r->rom[i] = (uint32_t) (rom[i]);
-    }
-    for (i = 0; i < rom_len; i++) {
-      uint16_t t = (uint16_t) r->rom[i];
-      if (t != rom[i]) {
-        r->ctrl.sim =
-          ((i & 0xffff) << 16) |
-          (t & 0xffff);
-      }
+    for (i = 0; i < iop16_rom_len; i++) {
+      r->rom[i] = (uint32_t) (iop16_rom[i]);
     }
   } while (0);
+  r->reg.reg = 0x80;
   r->ctrl.ctrl = 0x01;
-  while (((r->reg.reg) & 0xff) != 0xab);
+  while (((r->reg.reg) & 0x80));
   r->ctrl.ctrl = 0x00;
-  while(1);
-  r->ctrl.sim = 0x00;
+  r->ctrl.sim = (r->reg.reg) & 0x01;
   return 0;
 }

@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-26
---! @modified  2022-12-26
+--! @modified  2022-12-28
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -79,6 +79,7 @@ package body iop16_timer_pkg is
       if tick = '1' then
         if orv(r.timer_value) = '0' then
           v.running := '0';
+          v.timer_value := r.timer_reload;
         else
           v.timer_value := r.timer_value - 1;
         end if;

@@ -75,11 +75,15 @@ entity leon3mp is
     
     -- USB-RS232 interface
     RsRx            : in    std_logic;
-    RsTx            : out   std_logic
+    RsTx            : out   std_logic;
+
+    gpio : inout std_logic_vector (7 downto 0)
   );
 end;
 
 architecture rtl of leon3mp is
+  constant OEPOL : integer := padoen_polarity(padtech);
+  
   signal vcc : std_logic;
   signal gnd : std_logic;
 
@@ -271,6 +275,7 @@ begin
 
   dut: entity staging.iop16_apb
     generic map (
+      oepol => OEPOL,
       memtech => memtech,
       vendor_id => VENDOR_CONTRIB,
       device_id => CONTRIB_CORE1,
@@ -281,7 +286,10 @@ begin
       clk => clkm, rst => rstn,
       apbi => apbi, apbo => apbo(5),
       gpioi => gpioi, gpioo => gpioo);
-  gpioi <= (data => x"00");
+
+  iopadvv_inst: entity techmap.iopadvv
+    generic map (tech => padtech, width => 8, oepol => OEPOL)
+    port map (pad => gpio, i => gpioo.data, en => gpioo.oen, o => gpioi.data);
   
 -----------------------------------------------------------------------
 --  Test report module, only used for simulation ----------------------

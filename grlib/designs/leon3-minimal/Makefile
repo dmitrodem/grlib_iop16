@@ -15,6 +15,8 @@ DIRSKIP = b1553 pci/pcif leon2 leon2ft crypto satcan pci leon3ft ambatest can \
 	leon4v0 l2cache pwm gr1553b iommu
 FILESKIP = grcan.vhd
 
+EXTRA_PROGS = iop16_rom
+
 include $(GRLIB)/bin/Makefile 
 include $(GRLIB)/software/leon3/Makefile
 
@@ -22,3 +24,13 @@ include $(GRLIB)/software/leon3/Makefile
 prom.exe: prom.h prom.S
 ahbrom.vhd: prom.exe
 vsim: ahbrom.vhd
+
+iop16_rom.c: iop16_onewire.asm
+	./iop16_asm -f c -b iop16 -o iop16_rom.c iop16_onewire.asm
+
+clean_iop16_soft:
+	-rm -rf iop16_rom.c
+
+.PHONY: clean_iop16_soft
+
+soft-clean: clean_iop16_soft

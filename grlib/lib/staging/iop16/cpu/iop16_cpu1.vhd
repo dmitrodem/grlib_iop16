@@ -197,7 +197,7 @@ begin
   -- Supports up to 16 of 8-bit registers
   RegFile : entity staging.iop16_register_file
     generic map (
-      NUM_REGS => 4                     -- 4, 8. or 16
+      NUM_REGS => 16                     -- 4, 8. or 16
       )
     port map (
       i_clock    => i_clock,
@@ -285,10 +285,12 @@ begin
   o_peripWr          <= '1' when ((w_GreyCode10 and OP_IOW) = '1')   else '0';
   o_peripRd          <= '1' when ((w_GreyCode(1) = '1') and (OP_IOR = '1')) else '0';
 
+  --pragma translate_off
   disas: process is
   begin
     wait until w_GreyCode10 = '1';
     iop16_insn(w_ProgCtr, w_romData, w_rtnAddr, w_regFIn, w_regFOut, w_ALUZBit);
   end process disas;
+  --pragma translate_on
 
 end beh;

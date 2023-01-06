@@ -71,10 +71,12 @@ package body iop16_pkg is
     w_regFIn  : std_logic_vector;
     w_regFOut : std_logic_vector;
     w_ALUZBit : std_logic) is
+    -- pragma translate_off
     variable l : line;
     variable reg : line;
     variable imm : line;
     variable adr : line;
+  -- pragma translate_on
   begin
     -- pragma translate_off
     write(reg, string'("r") & integer'image(conv_integer(w_romData(11 downto 8))));

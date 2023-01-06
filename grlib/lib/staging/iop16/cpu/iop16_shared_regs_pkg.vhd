@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-26
---! @modified  2022-12-26
+--! @modified  2022-12-31
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -68,12 +68,12 @@ package body iop16_shared_regs_pkg is
       when others => null;
     end case;
     if (cpu_sel and cpuo.perip_wr) = '1' then
-      case cpuo.perip_address (1 downto 0) is
-        when "00"   => v.reg0 := cpuo.perip_data;
-        when "01"   => v.reg1 := cpuo.perip_data;
-        when "10"   => v.reg2 := cpuo.perip_data;
-        when "11"   => v.reg3 := cpuo.perip_data;
-        when others => null;
+      case cpuo.perip_address (2 downto 0) is
+        when "000"   => v.reg0 := cpuo.perip_data;
+        when "001"   => v.reg1 := cpuo.perip_data;
+        when "010"   => v.reg2 := cpuo.perip_data;
+        when "011"   => v.reg3 := cpuo.perip_data;
+        when others  => assert false report "CPU halt, code = " & tost(cpuo.perip_data) severity failure;
       end case;
     end if;
     if cpu_sel = '1' then

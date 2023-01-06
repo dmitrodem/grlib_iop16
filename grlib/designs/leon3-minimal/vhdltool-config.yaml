@@ -377,6 +377,7 @@ Libraries:
       - "/home/dmitriy/Work/git/demidrol.pw/grlib/grlib_iop16/grlib/designs/leon3-minimal/../../lib/staging/iop16/cpu/iop16_cpu.vhd"
       - "/home/dmitriy/Work/git/demidrol.pw/grlib/grlib_iop16/grlib/designs/leon3-minimal/../../lib/staging/iop16/cpu/iop16_cpu1.vhd"
       - "/home/dmitriy/Work/git/demidrol.pw/grlib/grlib_iop16/grlib/designs/leon3-minimal/../../lib/staging/iop16/cpu/iop16_apb.vhd"
+      - "/home/dmitriy/Work/git/demidrol.pw/grlib/grlib_iop16/grlib/designs/leon3-minimal/../../lib/staging/iop16/sim/ds18b20.vhd"
   - name: work
     paths:
       - "/home/dmitriy/Work/git/demidrol.pw/grlib/grlib_iop16/grlib/designs/leon3-minimal/../../lib/work/debug/debug.vhd"

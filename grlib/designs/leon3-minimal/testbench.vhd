@@ -31,8 +31,10 @@ library techmap;
 use techmap.gencomp.all;
 library micron;
 use micron.components.all;
-use work.debug.all;
 
+library staging;
+
+use work.debug.all;
 use work.config.all;
 
 entity testbench is
@@ -77,6 +79,8 @@ architecture behav of testbench is
   -- Output signals for LEDs
   signal led       : std_logic_vector(15 downto 0);
 
+  signal gpio : std_logic_vector (7 downto 0);
+  signal w_onewire : std_logic;
 begin
   -- clock and reset
   clk        <= not clk after ct * 1 ns;
@@ -84,7 +88,7 @@ begin
   rstn       <= not rst;
   dsubre     <= '0';
   urxd       <= 'H';
-  
+  gpio(7 downto 2) <= (others => '0');
   d3 : entity work.leon3mp
     generic map (fabtech, memtech, padtech, clktech)
     port map (
@@ -104,9 +108,15 @@ begin
       RsTx     => dsutx,
 
       -- Output signals for LEDs
-      led       => led
+      led       => led,
+
+      gpio => gpio
       );
 
+  w_onewire <= '0' when gpio(0) = '1' else
+               'H';
+  gpio(1) <= w_onewire;
+  
   sram0 : sram
     generic map (index => 4, abits => 24, fname => sdramfile)
     port map (address(23 downto 0), data(31 downto 24), RamCE, writen, oen);
@@ -129,6 +139,17 @@ begin
   end process;
 
   data <= buskeep(data) after 5 ns;
+
+  temp0: entity staging.ds18b20
+    generic map (
+      timing  => "MIN",
+      devid   => x"00a0458d3ea2be28",
+      nvrom   => x"3f0064",
+      speedup => 10.0)
+    port map (
+      pwrin  => '1',
+      tempin => 25.0,
+      dio    => w_onewire);
 end;
 
 
