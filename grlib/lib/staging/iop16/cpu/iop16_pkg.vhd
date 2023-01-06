@@ -41,6 +41,7 @@ package iop16_pkg is
     perip_wr      : std_logic;
     perip_rd      : std_logic;
     rom_address   : std_logic_vector (11 downto 0);
+    grey_code     : std_logic_vector (1 downto 0);
   end record iop16_cpu_out;
 
   type iop16_gpio_in is record

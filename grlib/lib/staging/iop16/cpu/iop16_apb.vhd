@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-13
---! @modified  2022-12-26
+--! @modified  2023-01-06
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -57,13 +57,15 @@ architecture behav of iop16_apb is
     cpu_gpio  : gpio_registers_t;
     cpu_timer : timer_registers_t;
     cpu_reg   : shared_registers_t;
+    rom_data  : std_logic_vector (7 downto 0);
   end record registers;
 
   constant RES_registers : registers := (
     cpu_ctrl  => RES_ctrl_registers,
     cpu_gpio  => RES_gpio_registers,
     cpu_timer => RES_timer_registers,
-    cpu_reg   => RES_shared_registers);
+    cpu_reg   => RES_shared_registers,
+    rom_data  => x"00");
   signal r, rin : registers;
 
   type mux_t is record
@@ -81,7 +83,8 @@ architecture behav of iop16_apb is
 
   signal rom_read    : std_logic;
   signal rom_write   : std_logic;
-  signal rom_dataout : std_logic_vector (15 downto 0);
+  signal rom_address : std_logic_vector (12 downto 0);
+  signal rom_dataout : std_logic_vector (7 downto 0);
 
 begin  -- architecture behav
 
@@ -147,19 +150,37 @@ begin  -- architecture behav
        cpu_readdata, apb_readdata);
 
     if rom_area = '1' then
-      apb_readdata := x"0000" & rom_dataout;
+      apb_readdata := x"000000" & rom_dataout;
     end if;
+
+    case cpuo.grey_code is
+      when "00"   => null;
+      when "01"   => v.rom_data := rom_dataout;
+      when "11"   => null;
+      when "10"   => null;
+      when others => null;
+    end case;
 
     if rst = '0' then
       v := RES_registers;
     end if;
 
+    ---------------------------------------------------------------------------
+    -- syncram_2p signals
+    ---------------------------------------------------------------------------
     if r.cpu_ctrl.run = '1' then
       rom_read <= '1';
     else
       rom_read <= apbi.psel(pindex) and (not apbi.pwrite) and rom_area;
     end if;
+
     rom_write <= apb_write and rom_area and (not r.cpu_ctrl.run);
+
+    if cpuo.grey_code = "00" then
+      rom_address <= cpuo.rom_address & "0";
+    else
+      rom_address <= cpuo.rom_address & "1";
+    end if;
 
     apbo <= (
       prdata  => apb_readdata,
@@ -184,7 +205,7 @@ begin  -- architecture behav
                not r.cpu_gpio.dir;
 
   gen_cpu : block is
-    signal rom_rdaddr : std_logic_vector (11 downto 0);
+    signal rom_rdaddr : std_logic_vector (10 downto 0);
     signal cpu_reset  : std_logic;
   begin  -- block gen_rom
 
@@ -201,13 +222,14 @@ begin  -- architecture behav
         o_peripWr          => cpuo.perip_wr,
         o_peripRd          => cpuo.perip_rd,
         o_romAddr          => cpuo.rom_address,
-        i_romData          => cpui.rom_data);
+        i_romData          => cpui.rom_data,
+        o_GreyCode         => cpuo.grey_code);
 
     rom0 : entity techmap.syncram_2p
       generic map (
         tech  => memtech,
-        abits => 12,
-        dbits => 16)
+        abits => 11,
+        dbits => 8)
       port map (
         rclk     => clk,
         renable  => rom_read,
@@ -215,15 +237,14 @@ begin  -- architecture behav
         dataout  => rom_dataout,
         wclk     => clk,
         write    => rom_write,
-        waddress => apbi.paddr(13 downto 2),
-        datain   => apbi.pwdata(15 downto 0),
+        waddress => apbi.paddr(12 downto 2),
+        datain   => apbi.pwdata(7 downto 0),
         testin   => apbi.testin);
 
     cpu_reset  <= rst and r.cpu_ctrl.run;
-    rom_rdaddr <= cpuo.rom_address when r.cpu_ctrl.run = '1' else
-                  apbi.paddr(13 downto 2);
-    cpui.rom_data <= rom_dataout when r.cpu_ctrl.run = '1' else
-                     x"4000";           -- lri r0, 0x0
+    rom_rdaddr <= rom_address(10 downto 0) when r.cpu_ctrl.run = '1' else
+                  apbi.paddr(12 downto 2);
+    cpui.rom_data <= r.rom_data & rom_dataout;
 
   end block gen_cpu;
 

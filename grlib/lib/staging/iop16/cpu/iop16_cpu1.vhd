@@ -28,7 +28,9 @@ entity iop16_cpu1 is
       o_peripRd          : out std_logic;
       -- PROM I/F
       o_romAddr          : out std_logic_vector (11 downto 0);
-      i_romData          : in  std_logic_vector (15 downto 0)
+      i_romData          : in  std_logic_vector (15 downto 0);
+      -- Grey code for loading from narrow ROM
+      o_GreyCode         : out std_logic_vector (1 downto 0)
       );
 end entity iop16_cpu1;
 
@@ -284,6 +286,8 @@ begin
   o_peripDataFromCPU <= w_regFOut;
   o_peripWr          <= '1' when ((w_GreyCode10 and OP_IOW) = '1')   else '0';
   o_peripRd          <= '1' when ((w_GreyCode(1) = '1') and (OP_IOR = '1')) else '0';
+
+  o_GreyCode <= w_GreyCode;
 
   --pragma translate_off
   disas: process is

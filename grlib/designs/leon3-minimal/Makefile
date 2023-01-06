@@ -26,7 +26,7 @@ ahbrom.vhd: prom.exe
 vsim: ahbrom.vhd
 
 iop16_rom.c: iop16_onewire.asm
-	./iop16_asm -f c -b iop16 -o iop16_rom.c iop16_onewire.asm
+	./iop16_asm -f c -w 8 -b iop16 -o iop16_rom.c iop16_onewire.asm
 
 clean_iop16_soft:
 	-rm -rf iop16_rom.c

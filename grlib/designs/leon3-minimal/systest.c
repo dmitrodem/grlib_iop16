@@ -46,7 +46,7 @@ struct iop16_t {
 };
 
 
-extern const uint16_t iop16_rom[];
+extern const uint8_t iop16_rom[];
 extern const size_t iop16_rom_len;
 
 int main() {
