@@ -88,7 +88,7 @@ begin
   rstn       <= not rst;
   dsubre     <= '0';
   urxd       <= 'H';
-  gpio(7 downto 2) <= (others => '0');
+  gpio(7 downto 2) <= (others => 'H');
   d3 : entity work.leon3mp
     generic map (fabtech, memtech, padtech, clktech)
     port map (
@@ -148,8 +148,17 @@ begin
       speedup => 10.0)
     port map (
       pwrin  => '1',
-      tempin => 25.0,
+      tempin => -1.52,
+      dio    => w_onewire);
+
+  temp1: entity staging.ds18b20
+    generic map (
+      timing  => "MIN",
+      devid   => x"002984456a32bf28",
+      nvrom   => x"3f0064",
+      speedup => 10.0)
+    port map (
+      pwrin  => '1',
+      tempin => 115.3,
       dio    => w_onewire);
 end;
-
-

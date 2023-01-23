@@ -30,7 +30,9 @@ entity iop16_cpu1 is
       o_romAddr          : out std_logic_vector (11 downto 0);
       i_romData          : in  std_logic_vector (15 downto 0);
       -- Grey code for loading from narrow ROM
-      o_GreyCode         : out std_logic_vector (1 downto 0)
+      o_GreyCode         : out std_logic_vector (1 downto 0);
+      -- Control disassembly output
+      i_Disas            : in std_logic
       );
 end entity iop16_cpu1;
 
@@ -293,7 +295,9 @@ begin
   disas: process is
   begin
     wait until w_GreyCode10 = '1';
-    iop16_insn(w_ProgCtr, w_romData, w_rtnAddr, w_regFIn, w_regFOut, w_ALUZBit);
+    if i_Disas = '1' then
+      iop16_insn(w_ProgCtr, w_romData, w_rtnAddr, w_regFIn, w_regFOut, w_ALUZBit);
+    end if;
   end process disas;
   --pragma translate_on
 

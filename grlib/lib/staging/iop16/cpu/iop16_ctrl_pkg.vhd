@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-26
---! @modified  2022-12-26
+--! @modified  2023-01-17
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -23,10 +23,11 @@ package iop16_ctrl_pkg is
 
   type ctrl_registers_t is record
     run : std_logic;
+    disas : std_logic;
   end record ctrl_registers_t;
 
   constant RES_ctrl_registers : ctrl_registers_t := (
-    run => '0');
+    run => '0', disas => '0');
 
   procedure handle_cpu_ctrl (
     signal r              : in    ctrl_registers_t;
@@ -64,15 +65,16 @@ package body iop16_ctrl_pkg is
     -- APB bus
     xapb_readdata := (others => '0');
     case apbi.paddr (2 downto 2) is
-      when "0"    => xapb_readdata := x"000000" & "0000000" & r.run;
+      when "0"    => xapb_readdata := x"000000" & "000000" & r.disas & r.run;
       when "1"    => null;
       when others => null;
     end case;
 
     if (apb_sel and apbi.pwrite) = '1' then
-      case apbi.paddr (2 downto 2) is
-        when "0"    => v.run := apbi.pwdata(0);
-        when "1"    => assert false report "End of simulation, code = " & tost (apbi.pwdata) severity failure;
+      case apbi.paddr (3 downto 2) is
+        when "00"   => v.run := apbi.pwdata(0);
+        when "01"   => grlib.testlib.print("MSG = " & tost (apbi.pwdata));
+        when "10"   => assert false report "End of simulation, code = " & tost (apbi.pwdata) severity failure;
         when others => null;
       end case;
     end if;

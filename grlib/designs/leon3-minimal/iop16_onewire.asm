@@ -3,7 +3,7 @@
 #define lo(x) (((x) >> 0) & 0xff)
 
 ;; Reset low impulse [us]
-#define T_RST_LOW (480)
+#define T_RST_LOW (477)
 
 ;; Presense sample time, after reset [us]
 #define T_ATR (150)
@@ -15,7 +15,7 @@
 #define T_LOW0 (60)
 
 ;;; Write 1 low time
-#define T_LOW1 (5)
+#define T_LOW1 (4)
 
 ;;; Read impulse time
 #define T_READ_SLOT (1)
@@ -35,8 +35,10 @@ start:
         ;; GPIO setup
         ;; GPIO[0] -- output
         ;; GPIO[1] -- input
+        ;; GPIO[2] -- output (debug)
         iow c00, CPU_GPIO_DOUT
-        iow c01, CPU_GPIO_DIR
+        lri r0, ((1 << 2) | (1 << 0))
+        iow r0, CPU_GPIO_DIR
 
         ;; load reset timer
         lri r0, hi(T_RST_LOW)
@@ -73,25 +75,58 @@ start:
         iow rF, CPU_TIMER_CTRL
         jsr proc_poll_timer
 
-        jsr proc_write_one
-        jsr proc_write_one
+        jsr proc_write_zero
+        jsr proc_write_zero
         jsr proc_write_zero
         jsr proc_write_zero
         jsr proc_write_one
         jsr proc_write_one
-        jsr proc_write_zero
-        jsr proc_write_zero
+        jsr proc_write_one
+        jsr proc_write_one
 
-        iow c00, CPU_REG_1
-        lri r3, 8
-loop_read_bits:
-        adi r3, 0xff
+search_loop:
+        lri r1, 0x00
         jsr proc_read_bit
-        cmp r3, 0x00
-        bne loop_read_bits
+        jsr proc_read_bit
 
+        cmp r1, 0x00
+        beq search_collision
+        cmp r1, 0x01
+        beq search_zero
+        cmp r1, 0x02
+        beq search_one
+        cmp r1, 0x03
+        beq search_none
+
+search_collision:
+        ior r0, CPU_REG_1
+        ior r1, CPU_REG_1
+        slr r1
+        iow r1, CPU_REG_1
+        ari r0, 0x01
+        bnz search_collision__one
+        ior r0, CPU_REG_0
+        ori r0, 0x01
+        iow r0, CPU_REG_0
+        jmp search_zero
+search_collision__one:
+        jmp search_one
+
+search_zero:
+        lri r0, 0x00
+        iow r0, CPU_SHREG_MSB
+        jsr proc_write_zero
+        jmp search_loop
+search_one:
+        lri r0, 0x01
+        iow r0, CPU_SHREG_MSB
+        jsr proc_write_one
+        jmp search_loop
+search_none:
         ;; write out reply
-        iow r2, CPU_REG_0
+        ior r0, CPU_REG_0
+        ari r0, 0x7F
+        iow r0, CPU_REG_0
 exit:
         jmp exit
 
@@ -115,72 +150,56 @@ proc_poll_timer:
 ;;; procedure WRITE_ZERO()
 ;;; clobber: r0, r1
 proc_write_zero:
-        lri r0, hi(T_LOW0)
-        lri r1, lo(T_LOW0)
-        jsr proc_load_timer
         iow c01, CPU_GPIO_DOUT
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0x55
+proc_write_zero__loop_0:
+        adi r0, 0xff
+        bnz proc_write_zero__loop_0
         iow c00, CPU_GPIO_DOUT
-        lri r0, hi(T_SLOT-T_LOW0)
-        lri r1, lo(T_SLOT-T_LOW0)
-        jsr proc_load_timer
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0x01
+proc_write_zero__loop_1:
+        adi r0, 0xff
+        bnz proc_write_zero__loop_1
         rts
 
 ;;; procedure WRITE_ONE()
 ;;; clobber: r0, r1
 proc_write_one:
-        lri r0, hi(T_LOW1)
-        lri r1, lo(T_LOW1)
-        jsr proc_load_timer
         iow c01, CPU_GPIO_DOUT
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0x6
+proc_write_one__loop_0:
+        adi r0, 0xff
+        bnz proc_write_one__loop_0
         iow c00, CPU_GPIO_DOUT
-        lri r0, hi(T_SLOT-T_LOW1)
-        lri r1, lo(T_SLOT-T_LOW1)
-        jsr proc_load_timer
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0x50
+proc_write_one__loop_1:
+        adi r0, 0xff
+        bnz proc_write_one__loop_1
         rts
 
 ;;; procedure READ_BIT()
 ;;; clobber: r0, r1
 proc_read_bit:
-        lri r0, hi(T_READ_SLOT)
-        lri r1, lo(T_READ_SLOT)
-        jsr proc_load_timer
         iow c01, CPU_GPIO_DOUT
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        xri c00, 0x00
+        xri c00, 0x00
         iow c00, CPU_GPIO_DOUT
 
-        lri r0, hi(T_READ_SAMP-T_READ_SLOT)
-        lri r1, lo(T_READ_SAMP-T_READ_SLOT)
-        jsr proc_load_timer
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0xa
+proc_read_bit__loop_0:
+        adi r0, 0xff
+        bnz proc_read_bit__loop_0
 
-        ior r0, CPU_GPIO_DIN
-        ari r0, (1 << 1)
-
-        ior r1, CPU_REG_1
         sll r1
-
-        cmp r0, 0x00
-        beq proc_read_bit__0
+        ior r0, CPU_GPIO_DIN
+        ari r0, (1<<1)
+        beq proc_read_bit__zero
         ori r1, 0x01
-proc_read_bit__0:
-        iow r1, CPU_REG_1
+proc_read_bit__zero:
 
-        iow cFF, CPU_REG_DBG
-
-        lri r0, hi(T_SLOT-T_READ_SAMP)
-        lri r1, lo(T_SLOT-T_READ_SAMP)
-        jsr proc_load_timer
-        iow cFF, CPU_TIMER_CTRL
-        jsr proc_poll_timer
+        lri r0, 0x46
+proc_read_bit__loop_1:
+        adi r0, 0xff
+        bnz proc_read_bit__loop_1
 
         rts

@@ -33,6 +33,7 @@ package iop16_pkg is
   type iop16_cpu_in is record
     perip_data : std_logic_vector (7 downto 0);
     rom_data : std_logic_vector (15 downto 0);
+    disas : std_logic;
   end record iop16_cpu_in;
 
   type iop16_cpu_out is record

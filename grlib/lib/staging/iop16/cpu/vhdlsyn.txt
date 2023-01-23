@@ -4,6 +4,7 @@ iop16_ctrl_pkg.vhd
 iop16_timer_pkg.vhd
 iop16_gpio_pkg.vhd
 iop16_shared_regs_pkg.vhd
+iop16_shiftreg_pkg.vhd
 
 iop16_alu.vhd
 iop16_grey_code.vhd

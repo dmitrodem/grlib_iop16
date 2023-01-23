@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-13
---! @modified  2023-01-06
+--! @modified  2023-01-17
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -24,6 +24,7 @@ use staging.iop16_ctrl_pkg.all;
 use staging.iop16_timer_pkg.all;
 use staging.iop16_gpio_pkg.all;
 use staging.iop16_shared_regs_pkg.all;
+use staging.iop16_shiftreg_pkg.all;
 
 entity iop16_apb is
 
@@ -57,6 +58,7 @@ architecture behav of iop16_apb is
     cpu_gpio  : gpio_registers_t;
     cpu_timer : timer_registers_t;
     cpu_reg   : shared_registers_t;
+    cpu_shreg : shiftreg_registers_t;
     rom_data  : std_logic_vector (7 downto 0);
   end record registers;
 
@@ -65,6 +67,7 @@ architecture behav of iop16_apb is
     cpu_gpio  => RES_gpio_registers,
     cpu_timer => RES_timer_registers,
     cpu_reg   => RES_shared_registers,
+    cpu_shreg => RES_shiftreg_registers,
     rom_data  => x"00");
   signal r, rin : registers;
 
@@ -73,10 +76,11 @@ architecture behav of iop16_apb is
     timer : std_logic;
     gpio  : std_logic;
     reg   : std_logic;
+    shreg : std_logic;
   end record mux_t;
 
   constant RES_mux : mux_t := (
-    ctrl => '0', timer => '0', gpio => '0', reg => '0');
+    ctrl => '0', timer => '0', gpio => '0', reg => '0', shreg => '0');
 
   signal cpui : iop16_cpu_in;
   signal cpuo : iop16_cpu_out;
@@ -113,16 +117,21 @@ begin  -- architecture behav
       when "00"   => cmux.timer := '1';
       when "01"   => cmux.gpio  := '1';
       when "10"   => cmux.reg   := '1';
+      when "11"   => cmux.shreg := '1';
       when others => null;
     end case;
+    if cpuo.grey_code /= "10" then
+      cmux := RES_mux;
+    end if;
 
     amux := RES_mux;
     if (apbi.psel(pindex) and apbi.penable and (not rom_area)) = '1' then
-      case apbi.paddr (6 downto 5) is
-        when "00"   => amux.ctrl  := '1';
-        when "01"   => amux.timer := '1';
-        when "10"   => amux.gpio  := '1';
-        when "11"   => amux.reg   := '1';
+      case apbi.paddr (7 downto 5) is
+        when "000"   => amux.ctrl  := '1';
+        when "001"   => amux.timer := '1';
+        when "010"   => amux.gpio  := '1';
+        when "011"   => amux.reg   := '1';
+        when "100"   => amux.shreg := '1';
         when others => null;
       end case;
     end if;
@@ -146,6 +155,11 @@ begin  -- architecture behav
     handle_cpu_shared_regs
       (r.cpu_reg, v.cpu_reg,
        cmux.reg, amux.reg,
+       cpuo, apbi,
+       cpu_readdata, apb_readdata);
+    handle_cpu_shiftreg
+      (r.cpu_shreg, v.cpu_shreg,
+       cmux.shreg, amux.shreg,
        cpuo, apbi,
        cpu_readdata, apb_readdata);
 
@@ -223,7 +237,8 @@ begin  -- architecture behav
         o_peripRd          => cpuo.perip_rd,
         o_romAddr          => cpuo.rom_address,
         i_romData          => cpui.rom_data,
-        o_GreyCode         => cpuo.grey_code);
+        o_GreyCode         => cpuo.grey_code,
+        i_Disas            => cpui.disas);
 
     rom0 : entity techmap.syncram_2p
       generic map (
@@ -245,6 +260,7 @@ begin  -- architecture behav
     rom_rdaddr <= rom_address(10 downto 0) when r.cpu_ctrl.run = '1' else
                   apbi.paddr(12 downto 2);
     cpui.rom_data <= r.rom_data & rom_dataout;
+    cpui.disas <= r.cpu_ctrl.disas;
 
   end block gen_cpu;
 

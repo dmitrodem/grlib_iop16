@@ -7,8 +7,9 @@
 
 struct iop16_ctrl_t {
   uint32_t ctrl;
+  uint32_t msg;
   uint32_t sim;
-  uint32_t __padding[8-2];
+  uint32_t __padding[8-3];
 };
 
 struct iop16_timer_t {
@@ -32,6 +33,11 @@ struct iop16_reg_t {
   uint32_t __padding[8-1];
 };
 
+struct iop16_shreg_t {
+  uint32_t reg[2];
+  uint32_t __padding[8-2];
+};
+
 struct iop16_t {
   union {
     struct {
@@ -39,6 +45,7 @@ struct iop16_t {
       struct iop16_timer_t timer;
       struct iop16_gpio_t gpio;
       struct iop16_reg_t reg;
+      struct iop16_shreg_t shreg;
     };
     uint32_t __padding[ROM_SIZE];
   };
@@ -61,10 +68,20 @@ int main() {
       r->rom[i] = (uint32_t) (iop16_rom[i]);
     }
   } while (0);
-  r->reg.reg = 0x80;
-  r->ctrl.ctrl = 0x01;
-  while (((r->reg.reg) & 0x80));
-  r->ctrl.ctrl = 0x00;
-  r->ctrl.sim = (r->reg.reg) & 0x01;
+  uint8_t mask = 0x00;
+  for (;;) {
+    r->reg.reg = (mask << 8) | 0x80;
+    r->ctrl.ctrl = 0x01;
+    while (((r->reg.reg) & 0x80));
+    r->ctrl.ctrl = 0x00;
+    r->ctrl.msg = r->shreg.reg[1];
+    r->ctrl.msg = r->shreg.reg[0];
+    if (r->reg.reg & 0x01) {
+      mask = (mask << 1) | 0x01;
+    } else {
+      break;
+    }
+  }
+  r->ctrl.sim = r->reg.reg & 0xff;
   return 0;
 }

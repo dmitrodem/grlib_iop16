@@ -57,32 +57,25 @@ begin  -- architecture behav
   cpui.perip_data <= x"00";
 
   runtest: process is
+    subtype byte_t is std_logic_vector (7 downto 0);
+    type firmware_t is array (natural range <>) of byte_t;
+    constant firmware : firmware_t (0 to 11) := (
+      x"41", x"07",
+      x"b1", x"ff",
+      x"f0", x"01",
+      x"41", x"ab",
+      x"71", x"20",
+      x"d0", x"05");
   begin  -- process runtest
     rst <= '0';
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"000"; wd <= x"40";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"001"; wd <= x"80";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"002"; wd <= x"70";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"003"; wd <= x"20";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"004"; wd <= x"78";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"005"; wd <= x"11";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"006"; wd <= x"79";
-    wait until rising_edge(clk);
-    wait until falling_edge(clk);
-    we <= '1';  wa <= x"007"; wd <= x"12";
-    wait until rising_edge(clk);
+
+    for i in firmware'range loop
+      wait until falling_edge(clk);
+      we <= '1';
+      wa <= conv_std_logic_vector(i, 12);
+      wd <= firmware(i);
+      wait until rising_edge(clk);
+    end loop;  -- i
     we <= '0'; wa <= x"000"; wd <= x"00";
     rst <= '1';
     wait;
