@@ -59,13 +59,29 @@ begin  -- architecture behav
   runtest: process is
     subtype byte_t is std_logic_vector (7 downto 0);
     type firmware_t is array (natural range <>) of byte_t;
-    constant firmware : firmware_t (0 to 11) := (
-      x"41", x"07",
-      x"b1", x"ff",
-      x"f0", x"01",
-      x"41", x"ab",
-      x"71", x"20",
-      x"d0", x"05");
+    constant firmware : firmware_t (0 to 41) := (
+      x"40", x"10",                     -- 0
+      x"41", x"01",                     -- 1
+      x"42", x"02",                     -- 2
+      x"43", x"03",                     -- 3
+      x"44", x"04",                     -- 4
+      x"45", x"05",                     -- 5
+      x"46", x"06",                     -- 6
+      x"47", x"07",                     -- 7
+      x"48", x"08",                     -- 8
+      x"49", x"09",                     -- 9
+      x"4a", x"0a",                     -- a
+      x"4b", x"0b",                     -- b
+      x"4c", x"0c",                     -- c
+      x"4d", x"0d",                     -- d
+      x"4e", x"0e",                     -- e
+      x"4f", x"0f",                     -- f
+      x"b0", x"09",                     -- 10
+      x"c0", x"13",                     -- 11
+      x"c0", x"13",                     -- 12
+      x"40", x"ab",                     -- 13
+      x"50", x"00"
+      );
   begin  -- process runtest
     rst <= '0';
 

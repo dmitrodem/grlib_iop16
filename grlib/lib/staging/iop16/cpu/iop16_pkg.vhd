@@ -39,6 +39,7 @@ package iop16_pkg is
   type iop16_cpu_out is record
     perip_address : std_logic_vector (7 downto 0);
     perip_data    : std_logic_vector (7 downto 0);
+    perip_mask    : std_logic_vector (7 downto 0);
     perip_wr      : std_logic;
     perip_rd      : std_logic;
     rom_address   : std_logic_vector (11 downto 0);
