@@ -97,7 +97,7 @@ begin
         when 16#00000# => romdata <= X"81d82000";
         when 16#00001# => romdata <= X"03000004";
         when 16#00002# => romdata <= X"821060e0";
-        when 16#00003# => romdata <= X"81880001";
+        when 16#00003# => romdata <= X"81884000";
         when 16#00004# => romdata <= X"81900000";
         when 16#00005# => romdata <= X"81980000";
         when 16#00006# => romdata <= X"81800000";
@@ -144,10 +144,10 @@ begin
         when 16#0002F# => romdata <= X"16bfffef";
         when 16#00030# => romdata <= X"81e00000";
         when 16#00031# => romdata <= X"82102002";
-        when 16#00032# => romdata <= X"81900001";
+        when 16#00032# => romdata <= X"81904000";
         when 16#00033# => romdata <= X"03000004";
         when 16#00034# => romdata <= X"821060e0";
-        when 16#00035# => romdata <= X"81880001";
+        when 16#00035# => romdata <= X"81884000";
         when 16#00036# => romdata <= X"01000000";
         when 16#00037# => romdata <= X"01000000";
         when 16#00038# => romdata <= X"01000000";
@@ -250,7 +250,7 @@ begin
         when 16#00000# => romdata <= X"0020d881";
         when 16#00001# => romdata <= X"04000003";
         when 16#00002# => romdata <= X"e0601082";
-        when 16#00003# => romdata <= X"01008881";
+        when 16#00003# => romdata <= X"00408881";
         when 16#00004# => romdata <= X"00009081";
         when 16#00005# => romdata <= X"00009881";
         when 16#00006# => romdata <= X"00008081";
@@ -297,10 +297,10 @@ begin
         when 16#0002F# => romdata <= X"efffbf16";
         when 16#00030# => romdata <= X"0000e081";
         when 16#00031# => romdata <= X"02201082";
-        when 16#00032# => romdata <= X"01009081";
+        when 16#00032# => romdata <= X"00409081";
         when 16#00033# => romdata <= X"04000003";
         when 16#00034# => romdata <= X"e0601082";
-        when 16#00035# => romdata <= X"01008881";
+        when 16#00035# => romdata <= X"00408881";
         when 16#00036# => romdata <= X"00000001";
         when 16#00037# => romdata <= X"00000001";
         when 16#00038# => romdata <= X"00000001";

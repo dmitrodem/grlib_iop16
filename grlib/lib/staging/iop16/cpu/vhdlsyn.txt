@@ -11,6 +11,7 @@ iop16_grey_code.vhd
 iop16_lifo.vhd
 iop16_program_counter.vhd
 iop16_register_file.vhd
+iop16_register_file1.vhd
 iop16_rom.vhd
 iop16_shifter.vhd
 iop16_cpu.vhd
