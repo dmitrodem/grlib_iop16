@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-27
---! @modified  2023-01-27
+--! @modified  2023-02-09
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -287,7 +287,7 @@ begin  -- architecture behav
       when ST_FETCH0 => v.state := ST_FETCH1;
       when ST_FETCH1 => v.state := ST_CHECK;
       when ST_CHECK  => v.state := ST_RUN0;
-      when ST_RUN0   => v.state := ST_FETCH0;
+      when ST_RUN0   => v.state := ST_RUN1;
       when ST_RUN1   => v.state := ST_FETCH0;
     end case;
 
@@ -306,7 +306,7 @@ begin  -- architecture behav
       rom_read := '1';
     elsif (r.state = ST_CHECK) then
       v.checksum := cpui.rom_data(7 downto 0);
-    elsif (r.state = ST_RUN0) then
+    elsif (r.state = ST_RUN1) then
       rom_read := '1';
     end if;
 
@@ -340,7 +340,7 @@ begin  -- architecture behav
         else
           iovalue := x"FF";
         end if;
-        if r.state = ST_RUN0 then
+        if r.state = ST_RUN1 then
           v.perip_wr := '1';
         end if;
       when x"3" =>                      -- sll/slr
@@ -362,7 +362,7 @@ begin  -- architecture behav
         Rd := cpui.perip_data;
         write_reg := '1';
       when x"7" =>                      -- iow
-        if r.state = ST_RUN0 then
+        if r.state = ST_RUN1 then
           v.perip_wr := '1';
         end if;
         iovalue := Rio;
@@ -398,7 +398,7 @@ begin  -- architecture behav
       when others => null;
     end case;
 
-    if r.state = ST_RUN0 then
+    if r.state = ST_RUN1 then
       if write_reg = '1' then
         set_cpu_reg(v, iRd, Rd);
       end if;

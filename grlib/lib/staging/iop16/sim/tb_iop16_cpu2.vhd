@@ -15,6 +15,7 @@ use modelsim_lib.util.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
+context vunit_lib.vc_context;
 
 entity tb_iop16_cpu2 is
   generic (
@@ -54,6 +55,7 @@ architecture behav of tb_iop16_cpu2 is
   signal rE : std_logic_vector (7 downto 0);
   signal pc : std_logic_vector (11 downto 0);
 
+  shared variable mem : memory_t;
 begin  -- architecture behav
 
   clk <= not clk after T/2;
@@ -213,6 +215,56 @@ begin  -- architecture behav
       rst <= '0';
     end procedure test03_run;
 
+    constant test04_description : string := "IOR/IOW test";
+    constant test04_firmware : firmware_t (0 to 6*2-1) := (
+      x"40", x"ab",                     -- 00 lri r0, 0xab
+      x"70", x"cd",                     -- 01 iow r0, 0xcd
+      x"7f", x"12",                     -- 02 iow rF, 0x12
+      x"61", x"12",                     -- 03 ior r1, 0x12
+      x"62", x"cd",                     -- 04 ior r2, 0xcd
+      x"00", x"00"                      -- 05 no-op
+    );
+    procedure test04_run is
+    begin  -- procedure test04_run
+      load_firmware(test04_firmware);
+      rst <= '1';
+      wait until pc = x"005";
+      check (perip_mem(16#cd#) = 16#ab#);
+      check (perip_mem(16#12#) = 16#ff#);
+      check (r1 = x"ff");
+      check (r2 = x"ab");
+      rst <= '0';
+    end procedure test04_run;
+
+    constant test05_description : string := "ALU test";
+    constant test05_firmware : firmware_t (0 to 13*2-1) := (
+      x"40", x"ab",                     -- 00 lri r0, 0xab
+      x"41", x"86",                     -- 01 lri r1, 0x86
+      x"42", x"49",                     -- 02 lri r2, 0x49
+      x"43", x"c4",                     -- 03 lri r3, 0xc4
+      x"44", x"9c",                     -- 04 lri r4, 0x9c
+      x"45", x"d4",                     -- 05 lri r5, 0xd4
+      x"46", x"d2",                     -- 06 lri r6, 0xd2
+      x"47", x"0a",                     -- 07 lri r7, 0x0a
+      x"8a", x"01",                     -- 08 xri rA, r0, r1
+      x"9b", x"23",                     -- 09 ori rB, r2, r3
+      x"ac", x"45",                     -- 0a ari rC, r4, r5
+      x"bd", x"67",                     -- 0b adi rD, r6, r7
+      x"00", x"00"                      -- 0c no-op
+      );
+    procedure test05_run is
+      variable v : std_logic_vector (7 downto 0);
+    begin  -- procedure test05_run
+      load_firmware(test05_firmware);
+      rst <= '1';
+      wait until pc = x"00c";
+      v := r0 xor r1; check (rA = v);
+      v := r2 or  r3; check (rB = v);
+      v := r4 and r5; check (rC = v);
+      v := r6 +   r7; check (rD = v);
+      rst <= '0';
+    end procedure test05_run;
+
   begin  -- process runtest
     rst <= '0';
 
@@ -238,10 +290,14 @@ begin  -- architecture behav
     while test_suite loop
       if run("LRI instruction") then
         test01_run;
-      elsif run("SLL/SLR instruction") then
+      elsif run("SLL/SLR instructions") then
         test02_run;
-      elsif run("BCLR/BSET instruction") then
+      elsif run("BCLR/BSET instructions") then
         test03_run;
+      elsif run("IOW/IOR instructions") then
+        test04_run;
+      elsif run("ALU instructions") then
+        test05_run;
       end if;
     end loop;
 
