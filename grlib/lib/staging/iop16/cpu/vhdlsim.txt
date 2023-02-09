@@ -1,1 +1,1 @@
-iop16_tb.vhd
+iop16_tb.vhd vhdlstd=2008
