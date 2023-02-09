@@ -12,12 +12,16 @@ use staging.iop16_pkg.all;
 
 library modelsim_lib;
 use modelsim_lib.util.all;
-use modelsim_lib.Transactions.all;
 
-entity iop16_tb is
-end entity iop16_tb;
+library vunit_lib;
+context vunit_lib.vunit_context;
 
-architecture behav of iop16_tb is
+entity tb_iop16_cpu2 is
+  generic (
+    runner_cfg : string);
+end entity tb_iop16_cpu2;
+
+architecture behav of tb_iop16_cpu2 is
 
   constant T : time := 10 ns;
 
@@ -140,35 +144,25 @@ begin  -- architecture behav
       x"4f", x"0f",                     -- 0f lri rF, 0x0f
       x"00", x"00"                      -- 10 no-op
       );
-    procedure test01_run (
-      variable ok : inout boolean) is
-      variable lok : boolean;
+    procedure test01_run is
     begin  -- procedure test01_run
-      lok := True;
-      grlib.testlib.print(test01_description);
       load_firmware(test01_firmware);
       rst <= '1';
       wait until pc = x"010";
-      lok := lok and (r0 = x"10");
-      lok := lok and (r1 = x"01");
-      lok := lok and (r2 = x"02");
-      lok := lok and (r3 = x"03");
-      lok := lok and (r4 = x"04");
-      lok := lok and (r5 = x"05");
-      lok := lok and (r6 = x"06");
-      lok := lok and (r7 = x"07");
-      lok := lok and (rA = x"0A");
-      lok := lok and (rB = x"0B");
-      lok := lok and (rC = x"0C");
-      lok := lok and (rD = x"0D");
-      lok := lok and (rE = x"0E");
+      check(r0 = x"10");
+      check(r1 = x"01");
+      check(r2 = x"02");
+      check(r3 = x"03");
+      check(r4 = x"04");
+      check(r5 = x"05");
+      check(r6 = x"06");
+      check(r7 = x"07");
+      check(rA = x"0A");
+      check(rB = x"0B");
+      check(rC = x"0C");
+      check(rD = x"0D");
+      check(rE = x"0E");
       rst <= '0';
-      if lok then
-        grlib.testlib.print("Passed");
-      else
-        grlib.testlib.print("Failed");
-      end if;
-      ok := ok and lok;
     end procedure test01_run;
 
     constant test02_description : string := "SLL/SLR test";
@@ -181,26 +175,16 @@ begin  -- architecture behav
       x"33", x"3a",                     -- 05 slr r3, r3, 0x2
       x"00", x"00"                      -- 06 no-op
     );
-    procedure test02_run (
-      variable ok : inout boolean) is
-      variable lok : boolean;
+    procedure test02_run is
     begin  -- procedure test02_run
-      lok := True;
-      grlib.testlib.print(test02_description);
       load_firmware(test02_firmware);
       rst <= '1';
       wait until pc = x"006";
-      lok := lok and (r0 = x"FF");
-      lok := lok and (r1 = x"AA");
-      lok := lok and (r2 = x"A0");
-      lok := lok and (r3 = x"04");
+      check (r0 = x"FF");
+      check (r1 = x"AA");
+      check (r2 = x"A0");
+      check (r3 = x"04");
       rst <= '0';
-      if lok then
-        grlib.testlib.print("Passed");
-      else
-        grlib.testlib.print("Failed");
-      end if;
-      ok := ok and lok;
     end procedure test02_run;
 
     constant test03_description : string := "BSET/BCLR test";
@@ -218,50 +202,49 @@ begin  -- architecture behav
       x"48", x"00",                     -- 0a lri r8, 0x00
       x"00", x"00"                      -- 0b no-op
     );
-    procedure test03_run (
-      variable ok : inout boolean) is
-      variable lok : boolean;
+    procedure test03_run is
     begin  -- procedure test03_run
-      lok := True;
-      grlib.testlib.print(test03_description);
       load_firmware(test03_firmware);
       rst <= '1';
       wait until pc = x"00b";
-      lok := lok and (perip_mem(0) = 16#01#);
-      lok := lok and (perip_mem(1) = 16#55#);
-      lok := lok and (perip_mem(2) = 16#95#);
+      check (perip_mem(0) = 16#01#);
+      check (perip_mem(1) = 16#55#);
+      check (perip_mem(2) = 16#95#);
       rst <= '0';
-      if lok then
-        grlib.testlib.print("Passed");
-      else
-        grlib.testlib.print("Failed");
-      end if;
-      ok := ok and lok;
     end procedure test03_run;
-
-    variable ok : boolean := true;
 
   begin  -- process runtest
     rst <= '0';
-    init_signal_spy("/iop16_tb/dut/r.reg.r0", "/iop16_tb/r0");
-    init_signal_spy("/iop16_tb/dut/r.reg.r1", "/iop16_tb/r1");
-    init_signal_spy("/iop16_tb/dut/r.reg.r2", "/iop16_tb/r2");
-    init_signal_spy("/iop16_tb/dut/r.reg.r3", "/iop16_tb/r3");
-    init_signal_spy("/iop16_tb/dut/r.reg.r4", "/iop16_tb/r4");
-    init_signal_spy("/iop16_tb/dut/r.reg.r5", "/iop16_tb/r5");
-    init_signal_spy("/iop16_tb/dut/r.reg.r6", "/iop16_tb/r6");
-    init_signal_spy("/iop16_tb/dut/r.reg.r7", "/iop16_tb/r7");
-    init_signal_spy("/iop16_tb/dut/r.reg.rA", "/iop16_tb/rA");
-    init_signal_spy("/iop16_tb/dut/r.reg.rB", "/iop16_tb/rB");
-    init_signal_spy("/iop16_tb/dut/r.reg.rC", "/iop16_tb/rC");
-    init_signal_spy("/iop16_tb/dut/r.reg.rD", "/iop16_tb/rD");
-    init_signal_spy("/iop16_tb/dut/r.reg.rE", "/iop16_tb/rE");
-    init_signal_spy("/iop16_tb/dut/r.pc",     "/iop16_tb/pc");
-    test01_run(ok);
-    test02_run(ok);
-    test03_run(ok);
 
-    std.env.stop(0);
-    wait;
+    -- SignalSpy
+    init_signal_spy("dut/r.reg.r0", "r0");
+    init_signal_spy("dut/r.reg.r1", "r1");
+    init_signal_spy("dut/r.reg.r2", "r2");
+    init_signal_spy("dut/r.reg.r3", "r3");
+    init_signal_spy("dut/r.reg.r4", "r4");
+    init_signal_spy("dut/r.reg.r5", "r5");
+    init_signal_spy("dut/r.reg.r6", "r6");
+    init_signal_spy("dut/r.reg.r7", "r7");
+    init_signal_spy("dut/r.reg.rA", "rA");
+    init_signal_spy("dut/r.reg.rB", "rB");
+    init_signal_spy("dut/r.reg.rC", "rC");
+    init_signal_spy("dut/r.reg.rD", "rD");
+    init_signal_spy("dut/r.reg.rE", "rE");
+    init_signal_spy("dut/r.pc",     "pc");
+
+    -- VUnit tests
+    test_runner_setup(runner, runner_cfg);
+
+    while test_suite loop
+      if run("LRI instruction") then
+        test01_run;
+      elsif run("SLL/SLR instruction") then
+        test02_run;
+      elsif run("BCLR/BSET instruction") then
+        test03_run;
+      end if;
+    end loop;
+
+    test_runner_cleanup(runner);
   end process runtest;
 end architecture behav;

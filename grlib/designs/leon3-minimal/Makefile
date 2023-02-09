@@ -34,3 +34,10 @@ clean_iop16_soft:
 .PHONY: clean_iop16_soft
 
 soft-clean: clean_iop16_soft
+
+vunit:
+	python run.py
+vunit-clean:
+	-rm -rf vunit_out
+soft-clean: vunit-clean
+.PHONY: vunit vunit-clean
