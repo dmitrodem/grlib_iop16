@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from vunit import VUnit
-from vunit.vhdl_standard import VHDL
 import os
-
+import sys
 
 PROJECT_ROOT = Path(__file__).parent
 GRLIB_ROOT   = PROJECT_ROOT.parent.parent
+VUNIT_PATH   = GRLIB_ROOT.parent / "submodules" / "vunit"
+
+sys.path.append(VUNIT_PATH.resolve().as_posix())
+
+from vunit import VUnit
+from vunit.vhdl_standard import VHDL
 
 os.environ["VUNIT_MODELSIM_INI"] = (GRLIB_ROOT / "bin" / "vunit_modelsim.ini").as_posix()
 
