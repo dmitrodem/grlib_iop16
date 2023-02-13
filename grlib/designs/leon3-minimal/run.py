@@ -18,6 +18,7 @@ os.environ["VUNIT_MODELSIM_INI"] = (GRLIB_ROOT / "bin" / "vunit_modelsim.ini").a
 VU = VUnit.from_argv(compile_builtins=False)
 VU.add_vhdl_builtins()
 VU.add_verification_components()
+VU.add_random()
 
 def add_grlib_lib(libname, libpath):
     lib = VU.add_library(libname)

@@ -4,7 +4,7 @@
 --! @details
 --! @author    Dmitriy Dyomin  <dmitrodem@gmail.com>
 --! @date      2022-12-27
---! @modified  2023-02-09
+--! @modified  2023-02-13
 --! @version   0.1
 --! @copyright Copyright (c) MIPT 2022
 -------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ entity iop16_cpu2 is
 end entity iop16_cpu2;
 
 architecture behav of iop16_cpu2 is
-  type state_t is (ST_IDLE, ST_FETCH0, ST_FETCH1, ST_CHECK, ST_RUN0, ST_RUN1);
+  type state_t is (ST_IDLE, ST_FETCH0, ST_FETCH1, ST_CHECK, ST_RUN0, ST_RUN1, ST_HALT, ST_ERROR);
 
   type cpu_registers_t is record
     r0 : std_logic_vector (7 downto 0);
@@ -43,14 +43,13 @@ architecture behav of iop16_cpu2 is
     rB : std_logic_vector (7 downto 0);
     rC : std_logic_vector (7 downto 0);
     rD : std_logic_vector (7 downto 0);
-    rE : std_logic_vector (7 downto 0);
   end record cpu_registers_t;
 
   constant RES_cpu_registers : cpu_registers_t := (
     r0 => x"00", r1 => x"00", r2 => x"00", r3 => x"00",
     r4 => x"00", r5 => x"00", r6 => x"00", r7 => x"00",
     rA => x"00", rB => x"00",
-    rC => x"00", rD => x"00", rE => x"00");
+    rC => x"00", rD => x"00");
 
   type stack_array_t is array (natural range <>) of std_logic_vector (11 downto 0);
   type stack_ptr_t is (STK0, STK1, STK2, STK3, STK4);
@@ -63,6 +62,15 @@ architecture behav of iop16_cpu2 is
   constant RES_stack_registers : stack_registers_t := (
     stack => (others => x"000"), ptr => STK0);
 
+  type cpu_flags_t is record
+    zero  : std_logic;
+    carry : std_logic;
+    irqen : std_logic;
+  end record cpu_flags_t;
+
+  constant RES_cpu_flags : cpu_flags_t := (
+    zero => '0', carry => '0', irqen => '0');
+
   type registers is record
     state    : state_t;
     pc       : std_logic_vector (11 downto 0);
@@ -72,9 +80,13 @@ architecture behav of iop16_cpu2 is
     checksum : std_logic_vector (7 downto 0);
     reg      : cpu_registers_t;
     stack    : stack_registers_t;
-    zero     : std_logic;
+    flags    : cpu_flags_t;
     perip_rd : std_logic;
     perip_wr : std_logic;
+    decout   : edacdectype;
+    errcnt   : std_logic_vector (3 downto 0);
+    irl      : std_logic_vector (3 downto 0);
+    irq_ack  : std_logic;
   end record registers;
 
   constant RES_registers : registers := (
@@ -86,9 +98,11 @@ architecture behav of iop16_cpu2 is
     checksum => (others => '0'),
     reg      => RES_cpu_registers,
     stack    => RES_stack_registers,
-    zero     => '0',
+    flags    => RES_cpu_flags,
     perip_rd => '0',
-    perip_wr => '0');
+    perip_wr => '0',
+    decout   => (data => x"00000000", err => '0', merr => '0'),
+    errcnt   => x"0", irl => x"0", irq_ack => '0');
 
   signal r, rin : registers;
 
@@ -113,7 +127,11 @@ architecture behav of iop16_cpu2 is
       when x"b"   => result := r.reg.rB;
       when x"c"   => result := r.reg.rC;
       when x"d"   => result := r.reg.rD;
-      when x"e"   => result := r.reg.rE;
+      when x"e"   => result := r.errcnt &
+                               "0" &
+                               r.flags.irqen &
+                               r.flags.carry &
+                               r.flags.zero;
       when x"f"   => result := x"ff";
       when others => null;
     end case;
@@ -140,7 +158,10 @@ architecture behav of iop16_cpu2 is
       when x"b"   => v.reg.rB := value;
       when x"c"   => v.reg.rC := value;
       when x"d"   => v.reg.rD := value;
-      when x"e"   => v.reg.rE := value;
+      when x"e"   => v.errcnt := value (7 downto 4);
+                     v.flags.irqen := value (2);
+                     v.flags.carry := value (1);
+                     v.flags.zero  := value (0);
       when x"f"   => null;
       when others => null;
     end case;
@@ -262,6 +283,7 @@ begin  -- architecture behav
     variable iRd : std_logic_vector (3 downto 0);
     variable Rd, Rs1, Rs2, Rio : std_logic_vector (7 downto 0);
     variable imm8 : std_logic_vector (7 downto 0);
+    variable imm4 : std_logic_vector (3 downto 0);
     variable pc_address : std_logic_vector (11 downto 0);
     variable iomask : std_logic_vector (7 downto 0);
     variable iovalue : std_logic_vector (7 downto 0);
@@ -275,6 +297,10 @@ begin  -- architecture behav
 
     variable write_reg : std_logic;
 
+    variable syn : std_logic_vector (6 downto 0);
+
+    variable halt, error : std_logic;
+    variable sum : std_logic_vector (8 downto 0);
   begin  -- process comb
 
     v := r;
@@ -282,6 +308,15 @@ begin  -- architecture behav
     v.perip_rd := '0';
     v.perip_wr := '0';
 
+    syn := "0000000";
+
+    -- latch interrupt request
+    if r.irl < cpui.irq then
+      v.irl := cpui.irq;
+    end if;
+    v.irq_ack := '0';
+
+    -- main FSM
     case r.state is
       when ST_IDLE   => v.state := ST_FETCH0;
       when ST_FETCH0 => v.state := ST_FETCH1;
@@ -289,6 +324,8 @@ begin  -- architecture behav
       when ST_CHECK  => v.state := ST_RUN0;
       when ST_RUN0   => v.state := ST_RUN1;
       when ST_RUN1   => v.state := ST_FETCH0;
+      when ST_HALT   => null;
+      when ST_ERROR  => null;
     end case;
 
     -- Fetch instruction
@@ -306,12 +343,22 @@ begin  -- architecture behav
       rom_read := '1';
     elsif (r.state = ST_CHECK) then
       v.checksum := cpui.rom_data(7 downto 0);
+      syn        := edacsyngen(x"0000" & r.op, v.checksum(6 downto 0));
+      v.decout   := edacdecode(x"0000" & r.op, syn);
+      if v.decout.err = '1' then
+        if r.errcnt /= x"F" then
+          v.errcnt := r.errcnt + 1;
+        end if;
+      end if;
+      if v.decout.merr = '1' then
+        v.state := ST_ERROR;
+      end if;
     elsif (r.state = ST_RUN1) then
       rom_read := '1';
     end if;
 
     -- Parse opcode
-    op         := r.op;
+    op         := v.decout.data (15 downto 0);
     opcode     := op(15 downto 12);
     iRd        := op(11 downto 8);
     Rd         := get_cpu_reg(r, iRd);
@@ -319,19 +366,24 @@ begin  -- architecture behav
     Rs2        := get_cpu_reg(r, op(3 downto 0));
     Rio        := get_cpu_reg(r, op(11 downto 8));
     imm8       := op(7 downto 0);
+    imm4       := op(3 downto 0);
     pc_address := op(11 downto 0);
 
     iomask  := x"FF";
     iovalue := x"00";
-    ioaddr  := imm8;
+    ioaddr  := Rs1 + imm4;
 
     nshift := op(2 downto 0);
     npc := r.pc + 1;
 
     write_reg := '0';
+    sum       := "0" & x"00";
 
     case opcode is
-      when x"0" => null;
+      when x"0" =>                      -- halt
+        if r.state = ST_RUN1 then
+          v.state := ST_HALT;
+        end if;
       when x"1" => null;
       when x"2" =>                      -- bset/bclr
         iomask := decode_bit(op(10 downto 8));
@@ -368,19 +420,23 @@ begin  -- architecture behav
         iovalue := Rio;
       when x"8" =>                      -- xri
         Rd := Rs1 xor Rs2;
-        v.zero := zflag(Rd);
+        v.flags.zero := zflag(Rd);
         write_reg := '1';
       when x"9" =>                      -- ori
         Rd := Rs1 or Rs2;
-        v.zero := zflag(Rd);
+        v.flags.zero := zflag(Rd);
         write_reg := '1';
       when x"A" =>                      -- ari
         Rd := Rs1 and Rs2;
-        v.zero := zflag(Rd);
+        v.flags.zero := zflag(Rd);
         write_reg := '1';
       when x"B" =>                      -- adi
-        Rd := Rs1 + Rs2;
-        v.zero := zflag(Rd);
+        sum := ("0" & Rs1) + ("0" & Rs2) + r.flags.carry;
+        Rd := sum(7 downto 0);
+        if r.state = ST_RUN1 then
+          v.flags.carry := sum(8);
+        end if;
+        v.flags.zero := zflag(Rd);
         write_reg := '1';
       when x"C" =>                      -- jsr
         stack_push(r, v, r.pc + 1);
@@ -388,11 +444,11 @@ begin  -- architecture behav
       when x"D" =>                      -- jmp
         npc := pc_address;
       when x"E" =>                      -- bez
-        if r.zero = '1' then
+        if r.flags.zero = '1' then
           npc := pc_address;
         end if;
       when x"F" =>                      -- bnz
-        if r.zero /= '1' then
+        if r.flags.zero /= '1' then
           npc := pc_address;
         end if;
       when others => null;
@@ -401,6 +457,11 @@ begin  -- architecture behav
     if r.state = ST_RUN1 then
       if write_reg = '1' then
         set_cpu_reg(v, iRd, Rd);
+      end if;
+      if r.irl /= x"0" then
+        npc := x"00" & r.irl;
+        v.irl := x"0";
+        v.irq_ack := '1';
       end if;
       v.pc := npc;
       rom_addr := npc & "0";
@@ -421,6 +482,10 @@ begin  -- architecture behav
     cpuo.rom_read    <= rom_read;
     cpuo.rom_address <= rom_addr (11 downto 0);
 
+    cpuo.errcnt <= r.errcnt;
+    cpuo.halt  <= conv_std_logic((r.state = ST_HALT) or (r.state = ST_ERROR) or (rst = '0'));
+    cpuo.error <= conv_std_logic(r.state = ST_ERROR);
+    cpuo.irq_ack <= r.irq_ack;
   end process comb;
 
 
@@ -430,5 +495,38 @@ begin  -- architecture behav
       r <= rin;
     end if;
   end process seq;
+
+  debug: block is
+    signal r0 : std_logic_vector (7 downto 0);
+    signal r1 : std_logic_vector (7 downto 0);
+    signal r2 : std_logic_vector (7 downto 0);
+    signal r3 : std_logic_vector (7 downto 0);
+    signal r4 : std_logic_vector (7 downto 0);
+    signal r5 : std_logic_vector (7 downto 0);
+    signal r6 : std_logic_vector (7 downto 0);
+    signal r7 : std_logic_vector (7 downto 0);
+    signal rA : std_logic_vector (7 downto 0);
+    signal rB : std_logic_vector (7 downto 0);
+    signal rC : std_logic_vector (7 downto 0);
+    signal rD : std_logic_vector (7 downto 0);
+    signal rE : std_logic_vector (7 downto 0);
+    signal pc : std_logic_vector (11 downto 0);
+  begin  -- block debug
+    r0 <= r.reg.r0;
+    r1 <= r.reg.r1;
+    r2 <= r.reg.r2;
+    r3 <= r.reg.r3;
+    r4 <= r.reg.r4;
+    r5 <= r.reg.r5;
+    r6 <= r.reg.r6;
+    r7 <= r.reg.r7;
+    rA <= r.reg.rA;
+    rB <= r.reg.rB;
+    rC <= r.reg.rC;
+    rD <= r.reg.rD;
+    rE <= r.errcnt & "0" &
+          r.flags.irqen & r.flags.carry & r.flags.zero;
+    pc <= r.pc;
+  end block debug;
 
 end architecture behav;

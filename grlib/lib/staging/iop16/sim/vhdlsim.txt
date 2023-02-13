@@ -1,2 +1,3 @@
 ds18b20.vhd
 tb_iop16_cpu2.vhd vhdlstd=2008
+tb_checksum.vhd vhdlstd=2008
